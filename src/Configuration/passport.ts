@@ -4,10 +4,12 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Strategy as FacebookStrategy } from "passport-facebook";
 import { Strategy as GitHubStrategy } from "passport-github2";
 import { IOAuthUserResponse } from "model/user.model.js";
+import { Logger } from "../utils/logger.js";
 
 const userService = new UserService();
+const logger = Logger.getInstance();
 
-//Gmail
+// Gmail
 passport.use(
   new GoogleStrategy(
     {
@@ -18,6 +20,7 @@ passport.use(
     async (accessToken, refreshToken, profile, done) => {
       try {
         if (!profile.emails || profile.emails.length === 0) {
+          logger.warn("Google OAuth failed: no email found", { profile });
           return done(new Error("No email found in Google profile"));
         }
 
@@ -35,6 +38,8 @@ passport.use(
           refreshToken,
         });
 
+        logger.info("Google OAuth successful", { email, id: user.id });
+
         // Build response combining user + account
         const response: IOAuthUserResponse = {
           user,
@@ -49,14 +54,14 @@ passport.use(
 
         return done(null, response);
       } catch (error) {
-        console.error("Google OAuth error:", error);
+        logger.error("Google OAuth error", { error });
         return done(new Error("Google login failed"), false);
       }
     },
   ),
 );
 
-//Facebook
+// Facebook
 passport.use(
   new FacebookStrategy(
     {
@@ -65,7 +70,6 @@ passport.use(
       callbackURL: process.env.FACEBOOK_CALLBACK_URL!,
       profileFields: ["id", "email", "name"],
     },
-
     async (accessToken, refreshToken, profile, done) => {
       try {
         const firstName =
@@ -76,12 +80,10 @@ passport.use(
           "";
 
         const fullName = `${firstName} ${lastName}`.trim();
-
         const email = profile.emails?.[0]?.value || "";
 
-        //Call service to find or create the user
         const user = await userService.findOrCreateSocialUser({
-          email: profile.emails?.[0]?.value || "",
+          email,
           name: fullName,
           provider: "facebook",
           providerAccountId: profile.id,
@@ -89,7 +91,8 @@ passport.use(
           refreshToken,
         });
 
-        //  Return user + account info 
+        logger.info("Facebook OAuth successful", { email, id: user.id });
+
         return done(null, {
           user,
           account: {
@@ -101,14 +104,14 @@ passport.use(
           },
         });
       } catch (error) {
-        console.error("Facebook OAuth error:", error);
+        logger.error("Facebook OAuth error", { error });
         return done(error, false);
       }
     },
   ),
 );
 
-//Github
+// Github
 passport.use(
   new GitHubStrategy(
     {
@@ -128,6 +131,11 @@ passport.use(
           refreshToken,
         });
 
+        logger.info("GitHub OAuth successful", {
+          email: user.email,
+          id: user.id,
+        });
+
         return done(null, {
           user,
           account: {
@@ -139,6 +147,7 @@ passport.use(
           },
         });
       } catch (error) {
+        logger.error("GitHub OAuth error", { error });
         done(error, false);
       }
     },
@@ -160,6 +169,7 @@ passport.deserializeUser(async (userSession: any, done) => {
     const user = await userService.getUserById(userSession.id);
     done(null, user);
   } catch (err) {
+    logger.error("Deserialize user failed", { error: err });
     done(err, null);
   }
 });

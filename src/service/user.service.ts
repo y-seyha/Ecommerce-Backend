@@ -3,7 +3,6 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { Logger } from "../utils/logger.js";
 import { CreateUserDTO, LoginUserDTO, UpdateUserDTO } from "dto/user.dto.js";
-import { IUser } from "model/user.model.js";
 import { mapUpdateUserDTOToIUser } from "utils/userMapper.js";
 
 const logger = Logger.getInstance();
@@ -125,31 +124,52 @@ export class UserService {
     refreshToken?: string;
     expiresAt?: Date;
   }) {
-    let user = await this.userRepo.findByEmail(profile.email);
+    try {
+      // Check if user already exists
+      let user = await this.userRepo.findByEmail(profile.email);
+      if (user) {
+        logger.info(
+          `Social login: Existing user found - email: ${profile.email}, provider: ${profile.provider}`,
+        );
+      } else {
+        // Split first and last name
+        const [first_name, last_name] = profile.name.split(" ");
 
-    const [first_name, last_name] = profile.name.split(" ");
+        // Create new user
+        user = await this.userRepo.create({
+          email: profile.email,
+          first_name: first_name || profile.name,
+          last_name: last_name || "",
+          role: "customer",
+          is_verified: true, // OAuth users are trusted
+          password: undefined,
+        });
 
-    if (!user) {
-      // Create new user without password
-      user = await this.userRepo.create({
-        email: profile.email,
-        first_name: first_name || profile.name,
-        last_name: last_name || "",
-        role: "customer",
-        is_verified: true,
-        password: undefined,
+        logger.info(
+          `Social login: New user created - email: ${profile.email}, provider: ${profile.provider}`,
+        );
+      }
+
+      // Create or update OAuth account
+      await this.userRepo.createOrUpdateAccount({
+        userId: user.id!,
+        provider: profile.provider,
+        provider_account_id: profile.providerAccountId,
+        access_token: profile.accessToken ?? null,
+        refresh_token: profile.refreshToken ?? null,
+        expires_at: profile.expiresAt ?? null,
       });
-    }
 
-    // Create or update OAuth account in accounts table
-    await this.userRepo.createOrUpdateAccount({
-      userId: user.id!,
-      provider: profile.provider,
-      provider_account_id: profile.providerAccountId,
-      access_token: profile.accessToken ?? null,
-      refresh_token: profile.refreshToken ?? null,
-      expires_at: profile.expiresAt ?? null,
-    });
-    return user;
+      logger.info(
+        `OAuth account linked: userId=${user.id}, provider=${profile.provider}`,
+      );
+
+      return user;
+    } catch (error) {
+      logger.error(
+        `Social login failed: email=${profile.email}, provider=${profile.provider}, error=${error}`,
+      );
+      throw error;
+    }
   }
 }
