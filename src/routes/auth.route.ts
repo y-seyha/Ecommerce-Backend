@@ -4,16 +4,19 @@ import { AuthController } from "controller/auth.controller.js";
 const router = Router();
 const authController = new AuthController();
 
-// Start Google OAuth login
+// GOOGLE 
 router.get("/google", authController.googleLogin.bind(authController));
+router.get("/google/callback", authController.googleCallback.bind(authController));
 
-// Google OAuth callback
-router.get(
-  "/google/callback",
-  authController.googleCallback.bind(authController),
-);
+// facebook
+router.get("/facebook", authController.facebookLogin.bind(authController));
+router.get("/facebook/callback", authController.facebookCallback.bind(authController));
 
-//Logout
+// github  
+router.get("/github", authController.githubLogin.bind(authController));
+router.get("/github/callback", authController.githubCallback.bind(authController));
+
+//logout
 router.post("/logout", authController.logout.bind(authController));
 
 export default router;

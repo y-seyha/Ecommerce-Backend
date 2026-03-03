@@ -116,7 +116,7 @@ export class UserService {
     return result;
   }
 
-  async findOrCreateGoogleUser(profile: {
+  async findOrCreateSocialUser(profile: {
     email: string;
     name: string;
     provider: "google" | "facebook" | "github";
