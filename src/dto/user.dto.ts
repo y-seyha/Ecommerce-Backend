@@ -41,3 +41,4 @@ export interface UpdateUserDTO {
   password?: string; // will be hashed in service
   role?: UserRole; // optional, only admin can update
 }
+
