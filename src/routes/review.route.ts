@@ -11,11 +11,12 @@ const controller = new ReviewController();
 router.get(
   "/paginated",
   authMiddleware,
-  authorizeRole("admin"),
+  // authorizeRole("admin"),
   controller.getAllPaginated.bind(controller),
 );
 // Public routes
 router.get("/", controller.findAll);
+
 router.get(
   "/:id",
   validate(ReviewValidator.getReviewByIdSchema),
@@ -45,7 +46,7 @@ router.post(
 router.put(
   "/:id",
   authMiddleware,
-  authorizeReviewOwnerOrAdmin(),
+  // authorizeReviewOwnerOrAdmin(),
   validate(ReviewValidator.updateReviewSchema),
   controller.update,
 );
@@ -54,11 +55,9 @@ router.put(
 router.delete(
   "/:id",
   authMiddleware,
-  authorizeReviewOwnerOrAdmin(),
+  // authorizeReviewOwnerOrAdmin(),
   validate(ReviewValidator.getReviewByIdSchema),
   controller.delete,
 );
-
-
 
 export default router;

@@ -116,14 +116,63 @@ export class ReviewRepository {
 
   async findAllPaginated(page: number, pageSize: number) {
     const offset = (page - 1) * pageSize;
+
+    // Total reviews count
     const totalRes = await this.pool.query(`SELECT COUNT(*) FROM reviews`);
     const total = parseInt(totalRes.rows[0].count, 10);
 
+    // Fetch reviews with user and product info
     const dataRes = await this.pool.query(
-      `SELECT * FROM reviews ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
+      `
+    SELECT 
+      r.id,
+      r.rating,
+      r.comment,
+      r.created_at,
+      u.id AS user_id,
+      u.first_name AS user_first_name,
+      u.last_name AS user_last_name,
+      u.email AS user_email,
+      p.id AS product_id,
+      p.name AS product_name,
+      p.price AS product_price,
+      p.stock AS product_stock,
+      p.image_url AS product_image
+    FROM reviews r
+    JOIN users u ON r.user_id = u.id
+    JOIN products p ON r.product_id = p.id
+    ORDER BY r.created_at DESC
+    LIMIT $1 OFFSET $2
+    `,
       [pageSize, offset],
     );
 
-    return { data: dataRes.rows, total, page, pageSize };
+    // Map rows to a structured format
+    const data = dataRes.rows.map((row) => ({
+      id: row.id,
+      rating: row.rating,
+      comment: row.comment,
+      created_at: row.created_at,
+      user: {
+        id: row.user_id,
+        first_name: row.user_first_name,
+        last_name: row.user_last_name,
+        email: row.user_email,
+      },
+      product: {
+        id: row.product_id,
+        name: row.product_name,
+        price: row.product_price,
+        stock: row.product_stock,
+        image: row.product_image,
+      },
+    }));
+
+    return {
+      data,
+      total,
+      page,
+      pageSize,
+    };
   }
 }

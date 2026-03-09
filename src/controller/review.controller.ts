@@ -6,16 +6,35 @@ import { z } from "zod";
 import { ReviewValidator } from "valildators/review.validar.js";
 import { paginationSchema } from "valildators/pagination.validator.js";
 
-type CreateReviewBody = z.infer<typeof ReviewValidator.createReviewSchema>["body"];
-type UpdateReviewBody = z.infer<typeof ReviewValidator.updateReviewSchema>["body"];
+type CreateReviewBody = z.infer<
+  typeof ReviewValidator.createReviewSchema
+>["body"];
+type UpdateReviewBody = z.infer<
+  typeof ReviewValidator.updateReviewSchema
+>["body"];
 
 export class ReviewController {
   private service = new ReviewService();
   private logger = Logger.getInstance();
 
-  create = async (req: Request<{}, {}, CreateReviewBody>, res: Response, next: NextFunction) => {
+  create = async (
+    req: Request<{}, {}, CreateReviewBody>,
+    res: Response,
+    next: NextFunction,
+  ) => {
     try {
-      const review = await this.service.createReview(req.body as CreateReviewDTO);
+      const user_id = req.user?.id; // <- attach from authMiddleware
+
+      if (!user_id) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const dto: CreateReviewDTO = {
+        ...req.body,
+        user_id,
+      };
+
+      const review = await this.service.createReview(dto);
       res.status(201).json(review);
     } catch (error) {
       this.logger.error("Review Controller: Create Failed", error);
@@ -23,10 +42,17 @@ export class ReviewController {
     }
   };
 
-   update = async (req: Request<{ id: string }, {}, UpdateReviewBody>, res: Response, next: NextFunction) => {
+  update = async (
+    req: Request<{ id: string }, {}, UpdateReviewBody>,
+    res: Response,
+    next: NextFunction,
+  ) => {
     try {
       const id = +req.params.id;
-      const review = await this.service.updateReview(id, req.body as UpdateReviewDTO);
+      const review = await this.service.updateReview(
+        id,
+        req.body as UpdateReviewDTO,
+      );
       res.json(review);
     } catch (error) {
       this.logger.error("Review Controller: Update Failed", error);
@@ -34,8 +60,11 @@ export class ReviewController {
     }
   };
 
-
-    delete = async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+  delete = async (
+    req: Request<{ id: string }>,
+    res: Response,
+    next: NextFunction,
+  ) => {
     try {
       const id = +req.params.id;
       const success = await this.service.deleteReview(id);
@@ -47,7 +76,7 @@ export class ReviewController {
     }
   };
 
-   findAll = async (_: Request, res: Response, next: NextFunction) => {
+  findAll = async (_: Request, res: Response, next: NextFunction) => {
     try {
       const reviews = await this.service.getAllReviews();
       res.json(reviews);
@@ -57,7 +86,11 @@ export class ReviewController {
     }
   };
 
- findById = async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+  findById = async (
+    req: Request<{ id: string }>,
+    res: Response,
+    next: NextFunction,
+  ) => {
     try {
       const id = +req.params.id;
       const review = await this.service.getReviewById(id);
@@ -69,7 +102,11 @@ export class ReviewController {
     }
   };
 
-   findByProductId = async (req: Request<{ product_id: string }>, res: Response, next: NextFunction) => {
+  findByProductId = async (
+    req: Request<{ product_id: string }>,
+    res: Response,
+    next: NextFunction,
+  ) => {
     try {
       const product_id = +req.params.product_id;
       const reviews = await this.service.getReviewsByProductId(product_id);
@@ -80,7 +117,11 @@ export class ReviewController {
     }
   };
 
- findByUserId = async (req: Request<{ user_id: string }>, res: Response, next: NextFunction) => {
+  findByUserId = async (
+    req: Request<{ user_id: string }>,
+    res: Response,
+    next: NextFunction,
+  ) => {
     try {
       const user_id = +req.params.user_id;
       const reviews = await this.service.getReviewsByUserId(user_id);
@@ -91,15 +132,17 @@ export class ReviewController {
     }
   };
 
-    getAllPaginated = async (req: Request, res: Response, next: NextFunction) => {
-      try {
-      const { page, pageSize } = paginationSchema.parse({ query: req.query }).query;
-  
-          const result = await this.service.getReviewPaginated(page, pageSize);
-        res.json(result);
-      } catch (error) {
-        this.logger.error("User Controller: GetAllPaginated Failed", error);
-        next(error);
-      }
-    };
+  getAllPaginated = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { page, pageSize } = paginationSchema.parse({
+        query: req.query,
+      }).query;
+
+      const result = await this.service.getReviewPaginated(page, pageSize);
+      res.json(result);
+    } catch (error) {
+      this.logger.error("User Controller: GetAllPaginated Failed", error);
+      next(error);
+    }
+  };
 }

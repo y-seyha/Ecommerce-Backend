@@ -58,32 +58,59 @@ export class UserRepository {
     return res.rows[0];
   }
 
-  async update(id: number, user: IUser): Promise<IUser> {
+  // async update(id: number, user: IUser): Promise<IUser> {
+  //   const result = await this.db.query(
+  //     `UPDATE users
+  //    SET
+  //      first_name = $1,
+  //      last_name = $2,
+  //      email = $3,
+  //      password = $4,
+  //      role = $5,
+  //      provider = $6,
+  //      google_id = $7,
+  //      is_verified = $8,
+  //       phone = $9,
+  //      updated_at = NOW()
+  //    WHERE id = $10
+  //    RETURNING *`,
+  //     [
+  //       user.first_name,
+  //       user.last_name,
+  //       user.email,
+  //       user.password || null,
+  //       user.role || "customer",
+  //       user.is_verified || false,
+  //       user.phone || null,
+  //       id,
+  //     ],
+  //   );
+
+  //   return result.rows[0];
+  // }
+
+  async update(id: number, user: Partial<IUser>): Promise<IUser> {
+    const fields: string[] = [];
+    const values: any[] = [];
+    let i = 1;
+
+    for (const [key, value] of Object.entries(user)) {
+      if (value !== undefined) {
+        // only include provided fields
+        fields.push(`${key} = $${i}`);
+        values.push(value);
+        i++;
+      }
+    }
+
+    if (fields.length === 0) {
+      throw new Error("No fields provided for update");
+    }
+
+    values.push(id); // last param is id
     const result = await this.db.query(
-      `UPDATE users
-     SET 
-       first_name = $1,
-       last_name = $2,
-       email = $3,
-       password = $4,
-       role = $5,
-       provider = $6,
-       google_id = $7,
-       is_verified = $8,
-        phone = $9,
-       updated_at = NOW()
-     WHERE id = $10
-     RETURNING *`,
-      [
-        user.first_name,
-        user.last_name,
-        user.email,
-        user.password || null,
-        user.role || "customer",
-        user.is_verified || false,
-        user.phone || null,
-        id,
-      ],
+      `UPDATE users SET ${fields.join(", ")}, updated_at = NOW() WHERE id = $${i} RETURNING *`,
+      values,
     );
 
     return result.rows[0];

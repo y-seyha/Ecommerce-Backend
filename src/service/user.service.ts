@@ -72,22 +72,11 @@ export class UserService {
 
   async updateUser(id: number, dto: UpdateUserDTO) {
     const existingUser = await this.userRepo.findById(id);
-    if (!existingUser) {
-      logger.warn(`Update failed: User not found - ${id}`);
-      throw new Error("User not found");
-    }
+    if (!existingUser) throw new Error("User not found");
 
-    // Hash password if provided
-    if (dto.password) {
-      dto.password = await bcrypt.hash(dto.password, 10);
-    }
+    if (dto.password) dto.password = await bcrypt.hash(dto.password, 10);
 
-    // Map DTO to full IUser
-    const userToUpdate = mapUpdateUserDTOToIUser(existingUser, dto);
-
-    const updatedUser = await this.userRepo.update(id, userToUpdate);
-
-    // Remove password before returning
+    const updatedUser = await this.userRepo.update(id, dto); // just pass dto directly
     const { password, ...safeUser } = updatedUser;
     return safeUser;
   }
