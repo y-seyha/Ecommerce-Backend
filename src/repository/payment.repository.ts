@@ -5,12 +5,13 @@ import { Payment } from "model/payment.model.js";
 export class PaymentRepository {
   private pool = Database.getInstance();
 
-  async insert(order_id: number, amount: number, method: "cod" | "card") {
+  async insert(dto: CreatePaymentDTO) {
     const { rows } = await this.pool.query(
       `INSERT INTO payments (order_id, amount, method)
-       VALUES ($1,$2,$3) RETURNING *`,
-      [order_id, amount, method],
+     VALUES ($1,$2,$3) RETURNING *`,
+      [dto.order_id, dto.amount, dto.method],
     );
+
     return rows[0];
   }
 

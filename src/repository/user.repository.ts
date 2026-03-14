@@ -27,7 +27,7 @@ export class UserRepository {
         user.password || "",
         user.role || "customer",
         user.is_verified || false,
-        user.phone || null,
+        user.phone,
       ],
     );
 

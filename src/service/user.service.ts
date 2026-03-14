@@ -20,6 +20,7 @@ export class UserService {
     }
 
     const hashedPassword = await bcrypt.hash(userData.password, 10);
+
     const newUser = await this.userRepo.create({
       ...userData,
       password: hashedPassword,
@@ -32,7 +33,16 @@ export class UserService {
     await this.cartService.createCart({ user_id: newUser.id! });
 
     const { password, ...safeUser } = newUser;
-    return safeUser;
+    const token = jwt.sign(
+      { id: newUser.id, email: newUser.email },
+      process.env.JWT_SECRET!,
+      { expiresIn: "7d" },
+    );
+
+    return {
+      user: safeUser,
+      token,
+    };
   }
 
   async login(data: LoginUserDTO) {
@@ -75,6 +85,11 @@ export class UserService {
     if (!existingUser) throw new Error("User not found");
 
     if (dto.password) dto.password = await bcrypt.hash(dto.password, 10);
+
+    // Check for empty update
+    if (!dto || Object.keys(dto).length === 0) {
+      throw new Error("No fields provided for update");
+    }
 
     const updatedUser = await this.userRepo.update(id, dto); // just pass dto directly
     const { password, ...safeUser } = updatedUser;

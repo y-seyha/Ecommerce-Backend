@@ -6,12 +6,18 @@ import { z } from "zod";
 import { ReviewValidator } from "valildators/review.validar.js";
 import { paginationSchema } from "valildators/pagination.validator.js";
 
-type CreateReviewBody = z.infer<
-  typeof ReviewValidator.createReviewSchema
->["body"];
+// type CreateReviewBody = z.infer<
+//   typeof ReviewValidator.createReviewSchema
+// >["body"];
 type UpdateReviewBody = z.infer<
   typeof ReviewValidator.updateReviewSchema
 >["body"];
+
+export interface CreateReviewBody {
+  product_id: number;
+  rating: number;
+  comment?: string;
+}
 
 export class ReviewController {
   private service = new ReviewService();

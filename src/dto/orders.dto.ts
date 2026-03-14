@@ -49,6 +49,8 @@ export interface CreateOrderDTO {
 }
 
 export interface UpdateOrderDTO {
+  id?: number;
+  user_id: number;
   total_price?: number;
   status?: "pending" | "completed" | "cancelled";
   shipping_name?: string;

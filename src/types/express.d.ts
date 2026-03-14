@@ -1,4 +1,5 @@
 import { IUser } from "model/user.model.ts";
+
 export interface AuthenticatedUser {
   id: number;
   role: UserRole;

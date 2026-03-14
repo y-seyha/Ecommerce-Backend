@@ -11,18 +11,18 @@ export class UserCartItemService {
 
   // Create item in the user's own cart
   async createCartItem(dto: CreateCartItemDto, userId: number) {
-    //  Get or create cart
+    // Get cart
     let { rows: cartRows } = await this.pool.query(
       `SELECT id FROM carts WHERE user_id=$1`,
       [userId],
     );
-    if (!cartRows.length)
-      throw new Error("Cart not found or does not belong to user");
 
     let cartId: number;
+
     if (cartRows.length) {
       cartId = cartRows[0].id;
     } else {
+      // Create cart if not exists
       const { rows: newCartRows } = await this.pool.query(
         `INSERT INTO carts(user_id) VALUES($1) RETURNING id`,
         [userId],
@@ -36,9 +36,10 @@ export class UserCartItemService {
      VALUES($1, $2, $3) RETURNING *`,
       [cartId, dto.product_id, dto.quantity],
     );
+
     const cartItem = cartItemRows[0];
 
-    //  Update cache
+    // Update cache
     try {
       const cacheKey = `cartItem:${cartItem.id}`;
       await redisClient.setEx(cacheKey, 24 * 60 * 60, JSON.stringify(cartItem));
@@ -49,7 +50,6 @@ export class UserCartItemService {
 
     return cartItem;
   }
-
   // Get items of user's cart only
   async getItemsByCartId(cartId: number, userId: number) {
     const { rows: cartRows } = await this.pool.query(

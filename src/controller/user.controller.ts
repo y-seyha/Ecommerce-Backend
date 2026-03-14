@@ -25,8 +25,19 @@ export class UserController {
     next: NextFunction,
   ) {
     try {
-      const user = await this.userService.register(req.body as CreateUserDTO);
-      res.status(201).json({ success: true, data: user });
+      const { user, token } = await this.userService.register(
+        req.body as CreateUserDTO,
+      );
+      res.cookie("accessToken", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+      res.status(201).json({
+        success: true,
+        data: user,
+      });
     } catch (error) {
       next(error); // passes to global error handler
     }

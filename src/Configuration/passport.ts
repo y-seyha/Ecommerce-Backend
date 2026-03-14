@@ -42,7 +42,7 @@ passport.use(
         const user = await userService.findOrCreateSocialUser({
           email,
           name,
-          first_name, // <-- add this
+          first_name,
           last_name,
           provider: "google",
           providerAccountId,

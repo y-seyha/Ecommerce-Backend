@@ -8,6 +8,7 @@ export interface Review {
 }
 
 export interface CreateReviewDTO {
+  id?: number;
   user_id: number;
   product_id: number;
   rating: number; // 1-5
@@ -17,4 +18,5 @@ export interface CreateReviewDTO {
 export interface UpdateReviewDTO {
   rating?: number; //  1-5
   comment?: string;
+  id?: number;
 }
