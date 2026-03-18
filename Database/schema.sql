@@ -13,6 +13,7 @@ CREATE TABLE users (
     phone VARCHAR(50),
     avatar_url TEXT,
     is_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    email_verification_otp VARCHAR(6),         
     email_verification_token TEXT,
     email_verification_expires TIMESTAMPTZ,
     password_reset_token TEXT,

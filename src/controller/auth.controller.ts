@@ -11,6 +11,7 @@ import {
   verifyAccessToken,
   verifyRefreshToken,
 } from "utils/jwt.js";
+// import { generateOTP, sendOTPEmail } from "utils/resend.js";
 
 const pool = Database.getInstance();
 
@@ -800,3 +801,102 @@ export const meHandler = async (req: Request, res: Response) => {
     res.status(401).json({ message: "Invalid or expired token" });
   }
 };
+
+// export const register = async (req: Request, res: Response) => {
+//   const { email, first_name, last_name, password, role } = req.body;
+
+//   try {
+//     // Hash the password
+//     const password_hash = await bcrypt.hash(password, 10);
+
+//     // Generate 6-digit OTP
+//     const otp = generateOTP();
+//     const otp_expires_at = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+//     //  Insert user with OTP (instead of token)
+//     const userResult = await pool.query<IUser>(
+//       `INSERT INTO users
+//        (email, first_name, last_name, role, is_verified, email_verification_otp, email_verification_expires, created_at, updated_at)
+//        VALUES ($1,$2,$3,$4,FALSE,$5,$6,NOW(),NOW())
+//        RETURNING *`,
+//       [
+//         email,
+//         first_name || null,
+//         last_name || null,
+//         (role as UserRole) || "customer",
+//         otp,
+//         otp_expires_at,
+//       ],
+//     );
+
+//     const user = userResult.rows[0];
+
+//     //  Insert credentials
+//     await pool.query<IAccount>(
+//       `INSERT INTO accounts
+//        (user_id, provider, provider_account_id, password_hash, created_at)
+//        VALUES ($1,'credentials',$2,$3,NOW())`,
+//       [user.id, email, password_hash],
+//     );
+
+//     //  Send OTP email
+//     await sendOTPEmail(email, otp);
+
+//     res.status(201).json({
+//       message:
+//         "User registered successfully. Please check your email for the OTP.",
+//       user: {
+//         id: user.id,
+//         email: user.email,
+//         first_name: user.first_name,
+//         last_name: user.last_name,
+//       },
+//     });
+//   } catch (err: any) {
+//     console.error(err);
+//     res.status(500).json({ message: "Internal server error" });
+//   }
+// };
+
+// /**
+//  * Verify email with OTP
+//  */
+// export const verifyEmailHandler = async (req: Request, res: Response) => {
+//   const { email, otp } = req.body;
+
+//   if (!email || !otp)
+//     return res.status(400).send("<h3>Email and OTP are required</h3>");
+
+//   try {
+//     //  Get user by email and check OTP + expiry
+//     const userResult = await pool.query<IUser>(
+//       `SELECT * FROM users
+//        WHERE email = $1
+//        AND email_verification_otp = $2
+//        AND email_verification_expires > NOW()`,
+//       [email, otp],
+//     );
+
+//     const user = userResult.rows[0];
+//     if (!user) return res.status(400).send("<h3>Invalid or expired OTP</h3>");
+
+//     //  Mark user as verified
+//     await pool.query(
+//       `UPDATE users
+//        SET is_verified = TRUE,
+//            email_verification_otp = NULL,
+//            email_verification_expires = NULL,
+//            updated_at = NOW()
+//        WHERE id = $1`,
+//       [user.id],
+//     );
+
+//     res.send(`
+//       <h2>Email Verified Successfully</h2>
+//       <p>Your account is now active. You can login using your credentials.</p>
+//     `);
+//   } catch (err: any) {
+//     console.error(err);
+//     res.status(500).send("<h3>Internal server error</h3>");
+//   }
+// };

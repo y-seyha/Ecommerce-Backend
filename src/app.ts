@@ -20,7 +20,6 @@ import {
   globalRateLimiter,
   helmetMiddleware,
 } from "middleware/global.middleware.js";
-import "./Configuration/passport.js";
 import cookieParser from "cookie-parser";
 import passport from "passport";
 

@@ -9,6 +9,7 @@ export interface IUser {
   phone?: string;
   avatar_url?: string;
   is_verified: boolean;
+  email_verification_otp?: string;
   email_verification_token?: string;
   email_verification_expires?: Date;
   password_reset_token?: string;
@@ -20,7 +21,7 @@ export interface IUser {
 export type AuthProvider = "credentials" | "google" | "github" | "facebook";
 
 export interface IAccount {
-  id: string; 
+  id: string;
   user_id: string;
   provider: AuthProvider;
   provider_account_id: string;
