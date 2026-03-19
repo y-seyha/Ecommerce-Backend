@@ -1,5 +1,6 @@
 export interface CreateProductDto {
   name: string;
+  user_id: string;
   description?: string;
   price: number;
   stock?: number;

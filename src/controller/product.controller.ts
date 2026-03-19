@@ -4,6 +4,7 @@ import { CreateProductDto, UpdateProductDto } from "dto/product.dto.js";
 import { Logger } from "utils/logger.js";
 import { paginationSchema } from "valildators/pagination.validator.js";
 import { Database } from "Configuration/database.js";
+import { IUser } from "model/user.model.js";
 
 export class ProductController {
   private service = new ProductService();
@@ -12,24 +13,24 @@ export class ProductController {
 
   create = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      if (!req.file) {
+      if (!req.file)
         return res.status(400).json({ message: "No file uploaded" });
-      }
 
-      // Extract and cast fields manually
+      const user = req.user as IUser; 
+
       const dto: CreateProductDto = {
-        name: req.body.name, // must exist
+        name: req.body.name,
         description: req.body.description || "",
         price: Number(req.body.price) || 0,
         stock: Number(req.body.stock) || 0,
         category_id: Number(req.body.category_id) || 0,
         image_url: (req.file as any).path,
         image_public_id: (req.file as any).filename,
+        user_id: user.id, // <-- assign ownership
       };
 
-      if (!dto.name) {
+      if (!dto.name)
         return res.status(400).json({ message: "Product name is required" });
-      }
 
       const product = await this.service.createProduct(dto);
       res.status(201).json(product);
@@ -42,6 +43,7 @@ export class ProductController {
   update = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = +req.params.id;
+      const user = req.user as IUser;
       const dto = { ...req.body } as UpdateProductDto;
 
       if (req.file) {
@@ -49,10 +51,10 @@ export class ProductController {
         dto.image_public_id = (req.file as any).filename;
       }
 
-      const product = await this.service.updateProduct(id, dto);
+      const product = await this.service.updateProduct(id, dto, user);
       res.json(product);
     } catch (error) {
-      this.logger.error("Product Controller : Updated Failed", error);
+      this.logger.error("Product Controller : Update Failed", error);
       next(error);
     }
   };
@@ -60,8 +62,9 @@ export class ProductController {
   delete = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = +req.params.id;
-      await this.service.deleteProduct(id);
+      const user = req.user as IUser;
 
+      await this.service.deleteProduct(id, user);
       res.json({ message: "Deleted Successfully" });
     } catch (error) {
       this.logger.error("Product Controller: Delete Failed", error);

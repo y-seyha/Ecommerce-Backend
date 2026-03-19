@@ -24,4 +24,11 @@ router.get("/:id", authMiddleware, controller.getSellerById);
 
 router.put("/become", authMiddleware, controller.becomeSeller);
 
+router.get(
+  "/:id/products",
+  authMiddleware,
+  authorizeRole("seller", "admin", "customer"),
+  controller.getProductsBySellerId,
+);
+
 export default router;

@@ -6,9 +6,10 @@ export class ProductRepository {
   private logger = Logger.getInstance();
   private pool = Database.getInstance();
 
-async create(product: Product): Promise<Product> {
-  const query = `
+  async create(product: Product): Promise<Product> {
+    const query = `
     INSERT INTO products(
+      user_id,          
       name,
       description,
       price,
@@ -17,23 +18,24 @@ async create(product: Product): Promise<Product> {
       image_url,
       image_public_id
     )
-    VALUES($1, $2, $3, $4, $5, $6, $7)
+    VALUES($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING *;
   `;
 
-  const values = [
-    product.name,
-    product.description,
-    product.price,
-    product.stock ?? 0,
-    product.category_id,
-    product.image_url ?? null,
-    product.image_public_id ?? null,
-  ];
+    const values = [
+      product.user_id,
+      product.name,
+      product.description,
+      product.price,
+      product.stock ?? 0,
+      product.category_id,
+      product.image_url ?? null,
+      product.image_public_id ?? null,
+    ];
 
-  const { rows } = await this.pool.query(query, values);
-  return rows[0];
-}
+    const { rows } = await this.pool.query(query, values);
+    return rows[0];
+  }
 
   async update(id: number, product: Product): Promise<Product> {
     const query = `

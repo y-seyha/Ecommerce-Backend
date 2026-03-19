@@ -60,6 +60,7 @@ CREATE TABLE categories (
 -- Products Table
 CREATE TABLE products (
     id SERIAL PRIMARY KEY,
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
     name VARCHAR(150) NOT NULL,
     description TEXT,
     price NUMERIC(10,2) NOT NULL,

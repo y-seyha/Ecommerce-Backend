@@ -135,4 +135,37 @@ export class SellerController {
       res.status(500).json({ message: "Internal server error" });
     }
   };
+
+  getProductsBySellerId = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const sellerId = req.params.id;
+
+      const query = `
+        SELECT p.*, u.first_name AS seller_first_name, u.last_name AS seller_last_name, u.email AS seller_email
+        FROM products p
+        JOIN users u ON p.user_id = u.id
+        WHERE u.id = $1
+        ORDER BY p.created_at DESC
+      `;
+
+      const { rows } = await this.pool.query(query, [sellerId]);
+
+      if (!rows.length)
+        return res
+          .status(404)
+          .json({ message: "No products found for this seller" });
+
+      res.json(rows);
+    } catch (error) {
+      this.logger.error(
+        `SellerController: getProductsBySellerId failed for sellerId=${req.params.id}`,
+        error,
+      );
+      next(error);
+    }
+  };
 }

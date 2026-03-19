@@ -3,6 +3,7 @@ import { CreateProductDto, UpdateProductDto } from "../dto/product.dto.js";
 import { Logger } from "utils/logger.js";
 import { Database } from "Configuration/database.js";
 import redisClient from "Configuration/redis.js";
+import { IUser } from "model/user.model.js";
 
 export class ProductService {
   private repo = new ProductRepository();
@@ -49,9 +50,17 @@ export class ProductService {
     }
   }
 
-  async updateProduct(id: number, dto: UpdateProductDto) {
+  async updateProduct(id: number, dto: UpdateProductDto, user: IUser) {
     try {
       const existing = await this.repo.findById(id);
+      // Only allow admin or owner to update
+      if (
+        existing.user_id &&
+        existing.user_id !== user.id &&
+        user.role !== "admin"
+      ) {
+        throw new Error("Unauthorized to update this product");
+      }
 
       if (!existing) {
         this.logger.warn(`Update Failed: Product ${id} not found`);
@@ -98,9 +107,18 @@ export class ProductService {
     }
   }
 
-  async deleteProduct(id: number) {
+  async deleteProduct(id: number, user: IUser) {
     const existing = await this.repo.findById(id);
     if (!existing) throw new Error("Product not found");
+
+    // Only allow admin or owner to update
+    if (
+      existing.user_id &&
+      existing.user_id !== user.id &&
+      user.role !== "admin"
+    ) {
+      throw new Error("Unauthorized to delete this product");
+    }
 
     await this.repo.delete(id);
 
