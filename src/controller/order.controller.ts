@@ -10,7 +10,6 @@ export class OrderController {
 
   create = async (req: Request, res: Response, next: NextFunction) => {
     try {
-     
       const dto = req.body as CreateOrderDTO;
 
       if (!dto.items || !dto.items.length) {
@@ -20,7 +19,7 @@ export class OrderController {
       }
 
       const result = await this.service.createOrder(dto);
-      res.status(201).json(result); 
+      res.status(201).json(result);
     } catch (error) {
       this.logger.error("Order Controller: Create Failed", error);
       next(error);

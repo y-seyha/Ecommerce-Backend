@@ -11,11 +11,13 @@ const router = Router();
 const controller = new ProductController();
 
 router.get("/", controller.findAll);
+router.get("/search", controller.search);
+router.get("/category/:id", controller.getByCategoryId);
 
 router.get(
   "/paginated",
   authMiddleware,
-  authorizeRole("admin"),
+  // authorizeRole("admin"),
   controller.getPaginated.bind(controller),
 );
 

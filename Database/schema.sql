@@ -4,7 +4,6 @@ CREATE EXTENSION IF NOT EXISTS "citext";
 -- Users Table
 CREATE TABLE users (
    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-
     email CITEXT UNIQUE NOT NULL,
     first_name VARCHAR(100),
     last_name VARCHAR(100),
@@ -36,6 +35,19 @@ CREATE TABLE accounts (
     UNIQUE(provider, provider_account_id)
 );
 
+-- Seller
+CREATE TABLE sellers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    store_name VARCHAR(150) NOT NULL,
+    store_description TEXT,
+    store_address TEXT,
+    phone VARCHAR(50),
+    logo_url TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- Categories Table
 CREATE TABLE categories (
     id SERIAL PRIMARY KEY,
@@ -62,7 +74,7 @@ CREATE TABLE products (
 -- Carts Table
 CREATE TABLE carts (
     id SERIAL PRIMARY KEY,
-    user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -78,7 +90,7 @@ CREATE TABLE cart_items (
 -- Orders Table
 CREATE TABLE orders (
     id SERIAL PRIMARY KEY,
-    user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     total_price NUMERIC(10,2) NOT NULL,
     status VARCHAR(50) DEFAULT 'pending',
     shipping_name VARCHAR(150),     
@@ -115,7 +127,7 @@ CREATE TABLE payments (
 -- Reviews Table
 CREATE TABLE reviews (
     id SERIAL PRIMARY KEY,
-    user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     product_id INT REFERENCES products(id) ON DELETE SET NULL,
     rating INT CHECK (rating >= 1 AND rating <= 5),
     comment TEXT,

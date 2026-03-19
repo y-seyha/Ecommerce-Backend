@@ -31,7 +31,7 @@ import {
 const router = Router();
 
 // Auth routes
-router.post("/register", validate(registerValidator), register);
+router.post("/register", register);
 router.post("/login", validate(loginValidator), login);
 // router.get("/verify-email", validate(verifyEmailValidator), verifyEmailHandler);
 router.get("/verify-email", verifyEmailHandler);

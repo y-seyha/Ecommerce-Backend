@@ -8,6 +8,7 @@ import { OrderValidator } from "valildators/order.validator.js";
 
 const router = Router();
 const controller = new OrderController();
+
 router.get(
   "/paginated",
   authMiddleware,
@@ -19,7 +20,7 @@ router.post(
   "/",
   authMiddleware,
   authorizeRole("customer", "admin", "seller"),
-  validate(OrderValidator.createOrderSchema),
+  // validate(OrderValidator.createOrderSchema),
   controller.create,
 );
 

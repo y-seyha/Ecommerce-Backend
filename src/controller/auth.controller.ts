@@ -782,12 +782,12 @@ export const refreshTokenHandler = async (req: Request, res: Response) => {
 
 export const meHandler = async (req: Request, res: Response) => {
   try {
-    const token = req.cookies.accessToken; // read from cookie
+    const token = req.cookies.accessToken;
     if (!token) return res.status(401).json({ message: "Unauthorized" });
 
     const payload: any = verifyAccessToken(token);
     const userResult = await pool.query(
-      `SELECT id, email, first_name, last_name, role, is_verified, avatar_url
+      `SELECT id, email, first_name, last_name, role, is_verified, avatar_url, phone
        FROM users WHERE id = $1`,
       [payload.userId],
     );

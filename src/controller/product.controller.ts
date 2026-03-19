@@ -3,10 +3,12 @@ import { ProductService } from "service/product.service.js";
 import { CreateProductDto, UpdateProductDto } from "dto/product.dto.js";
 import { Logger } from "utils/logger.js";
 import { paginationSchema } from "valildators/pagination.validator.js";
+import { Database } from "Configuration/database.js";
 
 export class ProductController {
   private service = new ProductService();
   private logger = Logger.getInstance();
+  private pool = Database.getInstance();
 
   create = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -43,7 +45,7 @@ export class ProductController {
       const dto = { ...req.body } as UpdateProductDto;
 
       if (req.file) {
-        dto.image_url = (req.file as any).path; 
+        dto.image_url = (req.file as any).path;
         dto.image_public_id = (req.file as any).filename;
       }
 
@@ -133,6 +135,48 @@ export class ProductController {
       });
     } catch (error) {
       this.logger.error("Product Controller : Upload Image Failed", error);
+      next(error);
+    }
+  };
+
+  search = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const search = (req.query.search as string) || "";
+      const query = `
+      SELECT id, name, description, price, stock, category_id, image_url
+      FROM products
+      WHERE name ILIKE $1
+      ORDER BY created_at DESC
+      LIMIT 20
+    `;
+      const result = await this.pool.query(query, [`%${search}%`]);
+      res.json({ products: result.rows });
+    } catch (err) {
+      console.error(err);
+      next(err);
+    }
+  };
+
+  getByCategoryId = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const categoryId = Number(req.params.id);
+
+      if (isNaN(categoryId)) {
+        return res.status(400).json({ message: "Invalid category ID" });
+      }
+
+      const query = `
+        SELECT id, name, description, price, stock, category_id, image_url, image_public_id, created_at, updated_at
+        FROM products
+        WHERE category_id = $1
+        ORDER BY created_at DESC
+      `;
+
+      const result = await this.pool.query(query, [categoryId]);
+
+      res.status(200).json({ products: result.rows });
+    } catch (error) {
+      this.logger.error(`Product Controller: GetByCategoryId Failed`, error);
       next(error);
     }
   };
