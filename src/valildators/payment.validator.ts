@@ -26,8 +26,8 @@ export class PaymentValidator {
 
   static getPaymentByIdSchema: ZodObject<ZodRawShape> = z.object({
     params: z.object({ id: z.coerce.number() }),
-    body: z.object({}),
-    query: z.object({}),
+    // body: z.object({}),
+    // query: z.object({}),
   });
 
   static getByOrderIdSchema: ZodObject<ZodRawShape> = z.object({

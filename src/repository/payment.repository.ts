@@ -120,14 +120,44 @@ export class PaymentRepository {
 
   async findAllPaginated(page: number, pageSize: number) {
     const offset = (page - 1) * pageSize;
+
+    // Total count of payments
     const totalRes = await this.pool.query(`SELECT COUNT(*) FROM payments`);
     const total = parseInt(totalRes.rows[0].count, 10);
 
+    // Fetch paginated payments with order and user info
     const dataRes = await this.pool.query(
-      `SELECT * FROM payments ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
+      `
+    SELECT 
+        p.id AS payment_id,
+        p.amount AS payment_amount,
+        p.method AS payment_method,
+        p.status AS payment_status,
+        p.paid_at AS payment_paid_at,
+        p.created_at AS payment_created_at,
+        o.id AS order_id,
+        o.total_price AS order_total,
+        o.status AS order_status,
+        o.created_at AS order_created_at,
+        u.id AS user_id,
+        u.first_name AS user_first_name,
+        u.last_name AS user_last_name,
+        u.email AS user_email
+    FROM payments p
+    JOIN orders o ON p.order_id = o.id
+    JOIN users u ON o.user_id = u.id
+    ORDER BY p.created_at DESC
+    LIMIT $1 OFFSET $2
+    `,
       [pageSize, offset],
     );
 
-    return { data: dataRes.rows, total, page, pageSize };
+    return {
+      data: dataRes.rows,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    };
   }
 }

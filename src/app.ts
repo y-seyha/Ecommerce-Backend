@@ -3,6 +3,7 @@ import express from "express";
 import userRoute from "./routes/user.route.js";
 import productRoute from "./routes/product.route.js";
 import categoryRoutes from "./routes/category.route.js";
+import adminRoutes from "./routes/admin/Dashboard.route.js";
 import cartRoutes from "./routes/cart.route.js";
 import cartItemRoutes from "./routes/cartItem.route.js";
 import ordersRoute from "./routes/orders.route.js";
@@ -67,6 +68,7 @@ app.use("/api/orders", ordersRoute);
 app.use("/api/order-items", orderItemRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/admin", adminRoutes);
 //authroute
 app.use("/api/v1/auth", authRoutes);
 
@@ -83,6 +85,7 @@ app.use("/api/v1/payments", paymentRoutes);
 app.use("/api/v1/reviews", reviewRoutes);
 app.use("/api/v1/checkout", checkout);
 app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/admin", adminRoutes);
 
 app.use(errorHandler);
 

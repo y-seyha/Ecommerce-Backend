@@ -7,11 +7,26 @@ const router = Router();
 const controller = new SellerController();
 
 // Seller orders
-router.get("/orders", authMiddleware, authorizeRole("seller"), controller.getOrders);
-router.patch("/orders/status", authMiddleware, authorizeRole("seller"), controller.updateOrderItemStatus);
+router.get(
+  "/orders",
+  authMiddleware,
+  authorizeRole("seller"),
+  controller.getOrders,
+);
+router.patch(
+  "/orders/status",
+  authMiddleware,
+  authorizeRole("seller"),
+  controller.updateOrderItemStatus,
+);
 
 // Seller analytics
-router.get("/analytics", authMiddleware, authorizeRole("seller"), controller.getAnalytics);
+router.get(
+  "/analytics",
+  authMiddleware,
+  authorizeRole("seller"),
+  controller.getAnalytics,
+);
 
 router.get(
   "/me",
@@ -27,8 +42,6 @@ router.put(
   controller.updateMyStore,
 );
 
-router.get("/:id", authMiddleware, controller.getSellerById);
-
 router.put("/become", authMiddleware, controller.becomeSeller);
 
 router.get(
@@ -38,7 +51,12 @@ router.get(
   controller.getProductsBySellerId,
 );
 
+// Admin Routes for Sellers
+router.use(authMiddleware, authorizeRole("admin")); // Admin routes
 
-
+router.get("/", controller.getAllSellers);
+router.get("/:id", controller.getSellerById);
+router.put("/:id", controller.updateSeller);
+router.delete("/:id", controller.deleteSeller);
 
 export default router;

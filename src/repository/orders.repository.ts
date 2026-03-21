@@ -157,13 +157,20 @@ export class OrderRepository {
 
   async findAllPaginated(page: number, pageSize: number) {
     const offset = (page - 1) * pageSize;
+
+    // Total count
     const totalRes = await this.pool.query(`SELECT COUNT(*) FROM orders`);
     const total = parseInt(totalRes.rows[0].count, 10);
 
+    // Join orders with users to get full name
     const dataRes = await this.pool.query(
-      `SELECT * FROM orders 
-      ORDER BY created_at DESC 
-      LIMIT $1 OFFSET $2`,
+      `SELECT 
+       o.*,
+       u.first_name || ' ' || u.last_name AS user_full_name
+     FROM orders o
+     JOIN users u ON o.user_id = u.id
+     ORDER BY o.created_at DESC
+     LIMIT $1 OFFSET $2`,
       [pageSize, offset],
     );
 

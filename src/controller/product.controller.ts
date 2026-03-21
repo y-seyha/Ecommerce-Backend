@@ -110,25 +110,21 @@ export class ProductController {
         maxPrice,
         sortBy,
         sortOrder,
+        search,
       } = parsed.query;
 
       const result = await this.service.getProductsPaginated(
         page,
         pageSize,
-        {
-          categoryId,
-          minPrice,
-          maxPrice,
-        },
-        {
-          sortBy,
-          sortOrder: sortOrder || "ASC",
-        },
+        { categoryId, minPrice, maxPrice },
+        { sortBy, sortOrder: sortOrder || "ASC" },
+        search,
       );
 
+      // Return all product info including category_name
       res.json(result);
     } catch (error) {
-      console.log("❌ Pagination error:", error);
+      console.log(" Pagination error:", error);
       next(error);
     }
   };

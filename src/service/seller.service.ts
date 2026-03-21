@@ -77,48 +77,6 @@ export class SellerService {
     return rows[0] || null;
   }
 
-  async getSellerById(
-    seller_id: string,
-  ): Promise<{ user: IUser; seller: Seller } | null> {
-    const query = `
-      SELECT s.*, u.id as user_id, u.email, u.first_name, u.last_name, u.role, u.phone, u.avatar_url, u.is_verified, u.created_at as user_created_at, u.updated_at as user_updated_at
-      FROM sellers s
-      JOIN users u ON u.id = s.user_id
-      WHERE s.id = $1
-      LIMIT 1
-    `;
-    const { rows } = await this.pool.query(query, [seller_id]);
-    if (!rows[0]) return null;
-
-    const row = rows[0];
-    const seller: Seller = {
-      id: row.id,
-      user_id: row.user_id,
-      store_name: row.store_name,
-      store_description: row.store_description,
-      store_address: row.store_address,
-      phone: row.phone,
-      logo_url: row.logo_url,
-      created_at: row.created_at,
-      updated_at: row.updated_at,
-    };
-
-    const user: IUser = {
-      id: row.user_id,
-      email: row.email,
-      first_name: row.first_name,
-      last_name: row.last_name,
-      role: row.role,
-      phone: row.phone,
-      avatar_url: row.avatar_url,
-      is_verified: row.is_verified,
-      created_at: row.user_created_at,
-      updated_at: row.user_updated_at,
-    };
-
-    return { seller, user };
-  }
-
   async getOrderBySeller(user_id: string) {
     const query = `
       SELECT 
@@ -164,7 +122,7 @@ export class SellerService {
 
     if (check.rows.length === 0) throw new Error("Unauthorized");
 
-    // Update status 
+    // Update status
     const update = await this.pool.query(
       `UPDATE order_items SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
       [status, order_item_id],
@@ -210,5 +168,96 @@ export class SellerService {
       topProducts: topProductsRes.rows,
       reviews: reviewsRes.rows,
     };
+  }
+
+  async getAllSellers() {
+    const query = `
+      SELECT 
+        s.*,
+        u.email,
+        u.first_name,
+        u.last_name,
+        u.role
+      FROM sellers s
+      JOIN users u ON u.id = s.user_id
+      ORDER BY s.created_at DESC
+    `;
+
+    const { rows } = await this.pool.query(query);
+    return rows;
+  }
+
+  async getSellerById(
+    seller_id: string,
+  ): Promise<{ user: IUser; seller: Seller } | null> {
+    const query = `
+      SELECT s.*, u.id as user_id, u.email, u.first_name, u.last_name, u.role, u.phone, u.avatar_url, u.is_verified, u.created_at as user_created_at, u.updated_at as user_updated_at
+      FROM sellers s
+      JOIN users u ON u.id = s.user_id
+      WHERE s.id = $1
+      LIMIT 1
+    `;
+    const { rows } = await this.pool.query(query, [seller_id]);
+    if (!rows[0]) return null;
+
+    const row = rows[0];
+    const seller: Seller = {
+      id: row.id,
+      user_id: row.user_id,
+      store_name: row.store_name,
+      store_description: row.store_description,
+      store_address: row.store_address,
+      phone: row.phone,
+      logo_url: row.logo_url,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    };
+
+    const user: IUser = {
+      id: row.user_id,
+      email: row.email,
+      first_name: row.first_name,
+      last_name: row.last_name,
+      role: row.role,
+      phone: row.phone,
+      avatar_url: row.avatar_url,
+      is_verified: row.is_verified,
+      created_at: row.user_created_at,
+      updated_at: row.user_updated_at,
+    };
+
+    return { seller, user };
+  }
+
+  async updateSeller(id: string, data: any) {
+    const fields: string[] = [];
+    const values: any[] = [];
+    let i = 1;
+
+    for (const [key, value] of Object.entries(data)) {
+      fields.push(`${key} = $${i}`);
+      values.push(value);
+      i++;
+    }
+
+    fields.push(`updated_at = NOW()`);
+
+    const query = `
+      UPDATE sellers
+      SET ${fields.join(", ")}
+      WHERE id = $${i}
+      RETURNING *
+    `;
+
+    values.push(id);
+
+    const { rows } = await this.pool.query(query, values);
+    return rows[0];
+  }
+
+  // ✅ DELETE SELLER ONLY
+  async deleteSeller(id: string) {
+    await this.pool.query(`DELETE FROM sellers WHERE id=$1`, [id]);
+    return { message: "Seller deleted" };
   }
 }

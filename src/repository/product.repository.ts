@@ -88,61 +88,96 @@ export class ProductRepository {
     pageSize: number,
     filters?: { categoryId?: number; minPrice?: number; maxPrice?: number },
     sort?: { sortBy?: string; sortOrder?: "ASC" | "DESC" },
+    search?: string,
   ) {
-    const offset = (page - 1) * pageSize;
     const values: any[] = [];
-    const filterClauses: string[] = [];
+    let index = 1;
 
-    // Filtering
+    let query = `
+    SELECT p.*, c.name as category_name
+    FROM products p
+    LEFT JOIN categories c ON p.category_id = c.id
+    WHERE 1=1
+  `;
+
+    // 🔍 SEARCH
+    if (search) {
+      query += ` AND p.name ILIKE $${index}`;
+      values.push(`%${search}%`);
+      index++;
+    }
+
+    // 🎯 FILTERS
     if (filters?.categoryId) {
+      query += ` AND p.category_id = $${index}`;
       values.push(filters.categoryId);
-      filterClauses.push(`category_id = $${values.length}`);
+      index++;
+    }
+
+    if (filters?.minPrice) {
+      query += ` AND p.price >= $${index}`;
+      values.push(filters.minPrice);
+      index++;
+    }
+
+    if (filters?.maxPrice) {
+      query += ` AND p.price <= $${index}`;
+      values.push(filters.maxPrice);
+      index++;
+    }
+
+    // 📊 SORT
+    if (sort?.sortBy) {
+      query += ` ORDER BY p.${sort.sortBy} ${sort.sortOrder || "ASC"}`;
+    } else {
+      query += ` ORDER BY p.created_at DESC`;
+    }
+
+    // 📄 PAGINATION
+    query += ` LIMIT $${index} OFFSET $${index + 1}`;
+    values.push(pageSize, (page - 1) * pageSize);
+
+    const { rows } = await this.pool.query(query, values);
+
+    // ✅ COUNT query with same filters
+    const countValues: any[] = [];
+    let countIndex = 1;
+    let countQuery = `SELECT COUNT(*) FROM products p WHERE 1=1`;
+
+    if (search) {
+      countQuery += ` AND p.name ILIKE $${countIndex}`;
+      countValues.push(`%${search}%`);
+      countIndex++;
+    }
+    if (filters?.categoryId) {
+      countQuery += ` AND p.category_id = $${countIndex}`;
+      countValues.push(filters.categoryId);
+      countIndex++;
     }
     if (filters?.minPrice) {
-      values.push(filters.minPrice);
-      filterClauses.push(`price >= $${values.length}`);
+      countQuery += ` AND p.price >= $${countIndex}`;
+      countValues.push(filters.minPrice);
+      countIndex++;
     }
     if (filters?.maxPrice) {
-      values.push(filters.maxPrice);
-      filterClauses.push(`price <= $${values.length}`);
+      countQuery += ` AND p.price <= $${countIndex}`;
+      countValues.push(filters.maxPrice);
+      countIndex++;
     }
 
-    const whereClause = filterClauses.length
-      ? `WHERE ${filterClauses.join(" AND ")}`
-      : "";
+    const countRes = await this.pool.query(countQuery, countValues);
+    const totalItems = Number(countRes.rows[0].count);
+    const totalPages = Math.ceil(totalItems / pageSize);
 
-    // Sorting
-    const allowedSortFields = ["id", "price", "name", "created_at"];
-    const sortField =
-      sort?.sortBy && allowedSortFields.includes(sort.sortBy)
-        ? sort.sortBy
-        : "id";
-    const sortOrder = sort?.sortOrder || "ASC";
-
-    // Add LIMIT & OFFSET
-    values.push(pageSize, offset);
-    const query = `
-    SELECT * FROM products
-    ${whereClause}
-    ORDER BY ${sortField} ${sortOrder}
-    LIMIT $${values.length - 1} OFFSET $${values.length}
-  `;
-    const { rows: data } = await this.pool.query(query, values);
-
-    // Count total
-    const countQuery = `SELECT COUNT(*) FROM products ${whereClause}`;
-    const { rows } = await this.pool.query(
-      countQuery,
-      values.slice(0, values.length - 2),
-    );
-    const total = parseInt(rows[0].count, 10);
+    // adjust page if too high
+    const currentPage = page > totalPages ? totalPages : page;
 
     return {
-      data,
-      total,
-      page,
+      data: rows,
+      page: currentPage,
       pageSize,
-      totalPages: Math.ceil(total / pageSize),
+      totalItems,
+      totalPages,
     };
   }
 

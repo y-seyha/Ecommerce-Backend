@@ -212,4 +212,60 @@ export class SellerController {
       next(err);
     }
   };
+
+  getAllSellers = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const sellers = await this.service.getAllSellers();
+      res.json(sellers);
+    } catch (error) {
+      this.logger.error("AdminSellerController: getAllSellers failed", error);
+      next(error);
+    }
+  };
+
+  updateSeller = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = Array.isArray(req.params.id)
+        ? req.params.id[0]
+        : req.params.id;
+
+     
+      const data: Record<string, any> = { ...req.body };
+
+      // If you use multer for file uploads, attach logo file path:
+      if (req.file) {
+        data.logo_url = req.file.path; // or wherever you save it
+      }
+
+      const updated = await this.service.updateSeller(id, data);
+
+      if (!updated)
+        return res.status(404).json({ message: "Seller not found" });
+
+      res.json({
+        message: "Seller updated successfully",
+        data: updated,
+      });
+    } catch (error: any) {
+      this.logger.error("AdminSellerController: updateSeller failed", error);
+      res
+        .status(500)
+        .json({ message: error.message || "Internal server error" });
+    }
+  };
+
+  deleteSeller = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = Array.isArray(req.params.id)
+        ? req.params.id[0]
+        : req.params.id;
+
+      await this.service.deleteSeller(id);
+
+      res.json({ message: "Seller deleted successfully" });
+    } catch (error) {
+      this.logger.error("AdminSellerController: deleteSeller failed", error);
+      next(error);
+    }
+  };
 }

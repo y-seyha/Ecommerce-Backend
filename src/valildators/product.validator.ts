@@ -37,6 +37,7 @@ export class ProductValidator {
       categoryId: z.coerce.number().optional(),
       minPrice: z.coerce.number().optional(),
       maxPrice: z.coerce.number().optional(),
+      search: z.string().optional().default(""),
 
       sortBy: z.string().optional(),
       sortOrder: z

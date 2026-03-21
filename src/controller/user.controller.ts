@@ -1,41 +1,95 @@
-import { Request, Response } from "express";
-import { Database } from "../Configuration/database.js";
+import { Request, Response, NextFunction } from "express";
+import { UserService } from "service/user.service.js";
+import { Logger } from "utils/logger.js";
 
-const pool = Database.getInstance();
+export class UserController {
+  private service = new UserService();
+  private logger = Logger.getInstance();
 
-export const updateUserById = async (req: Request, res: Response) => {
-  try {
-    const userId = req.params.id; // user id from URL
-    const { first_name, last_name, email, phone } = req.body;
-
-    // Optional: validate input
-    if (!first_name || !last_name || !email) {
-      return res.status(400).json({ message: "Missing required fields" });
-    }
-
-    // Update user
-    const result = await pool.query(
-      `UPDATE users
-       SET first_name = $1,
-           last_name = $2,
-           email = $3,
-           phone = $4,
-           updated_at = NOW()
-       WHERE id = $5
-       RETURNING id, first_name, last_name, email, phone, role, is_verified, avatar_url`,
-      [first_name, last_name, email, phone, userId],
-    );
-
-    const updatedUser = result.rows[0];
-
-    if (!updatedUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // Return updated user
-    res.json({ status: "success", user: updatedUser });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+  private getId(param: string | string[] | undefined): string {
+    if (!param) throw new Error("Invalid ID");
+    return Array.isArray(param) ? param[0] : param;
   }
-};
+
+  getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const users = await this.service.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      this.logger.error("UserController: getAllUsers failed", error);
+      next(error);
+    }
+  };
+
+  getUserById = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = this.getId(req.params.id);
+
+      const user = await this.service.getUserById(id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      res.json(user);
+    } catch (error) {
+      this.logger.error("UserController: getUserById failed", error);
+      next(error);
+    }
+  };
+
+  createUser = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const data = req.body;
+
+      if (!data.email || !data.role) {
+        return res.status(400).json({
+          message: "Email and role are required",
+        });
+      }
+
+      const user = await this.service.createUser(data);
+
+      res.status(201).json({
+        message: "User created successfully",
+        data: user,
+      });
+    } catch (error) {
+      this.logger.error("UserController: createUser failed", error);
+      next(error);
+    }
+  };
+
+  updateUser = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = this.getId(req.params.id);
+      const data = req.body;
+
+      if (!data || Object.keys(data).length === 0) {
+        return res.status(400).json({ message: "No data provided" });
+      }
+
+      const updated = await this.service.updateUser(id, data);
+
+      if (!updated) return res.status(404).json({ message: "User not found" });
+
+      res.json({
+        message: "User updated successfully",
+        data: updated,
+      });
+    } catch (error) {
+      this.logger.error("UserController: updateUser failed", error);
+      next(error);
+    }
+  };
+
+  deleteUser = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = this.getId(req.params.id);
+
+      await this.service.deleteUser(id);
+
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      this.logger.error("UserController: deleteUser failed", error);
+      next(error);
+    }
+  };
+}

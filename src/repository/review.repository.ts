@@ -117,22 +117,24 @@ export class ReviewRepository {
   async findAllPaginated(page: number, pageSize: number) {
     const offset = (page - 1) * pageSize;
 
-    // Total reviews count
+    // Get total number of reviews
     const totalRes = await this.pool.query(`SELECT COUNT(*) FROM reviews`);
     const total = parseInt(totalRes.rows[0].count, 10);
 
-    // Fetch reviews with user and product info
+    // Fetch paginated reviews with user and product info
     const dataRes = await this.pool.query(
       `
-    SELECT 
-      r.id,
+    SELECT
+      r.id AS review_id,
       r.rating,
       r.comment,
-      r.created_at,
+      r.created_at AS review_created_at,
+      
       u.id AS user_id,
       u.first_name AS user_first_name,
       u.last_name AS user_last_name,
       u.email AS user_email,
+
       p.id AS product_id,
       p.name AS product_name,
       p.price AS product_price,
@@ -147,12 +149,12 @@ export class ReviewRepository {
       [pageSize, offset],
     );
 
-    // Map rows to a structured format
+    // Map to structured object
     const data = dataRes.rows.map((row) => ({
-      id: row.id,
+      id: row.review_id,
       rating: row.rating,
       comment: row.comment,
-      created_at: row.created_at,
+      created_at: row.review_created_at,
       user: {
         id: row.user_id,
         first_name: row.user_first_name,
@@ -164,7 +166,7 @@ export class ReviewRepository {
         name: row.product_name,
         price: row.product_price,
         stock: row.product_stock,
-        image: row.product_image,
+        image_url: row.product_image,
       },
     }));
 
@@ -173,6 +175,7 @@ export class ReviewRepository {
       total,
       page,
       pageSize,
+      totalPages: Math.ceil(total / pageSize),
     };
   }
 }

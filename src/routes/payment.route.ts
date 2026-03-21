@@ -4,7 +4,7 @@ import { authMiddleware } from "middleware/authMiddleware.js";
 import { authorizeRole } from "middleware/roleMiddleware.js";
 import { authorizePaymentOwnerOrAdmin } from "middleware/authorizePaymentOwnerOrAdmin.middleware.js";
 import { validate } from "middleware/validate.middleware.js";
-import { PaymentValidator } from "valildators/payment.validator.js";
+import { PaymentValidator } from "../valildators/payment.validator.js";
 
 const router = Router();
 const controller = new PaymentController();

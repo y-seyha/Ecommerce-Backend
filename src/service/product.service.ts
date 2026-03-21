@@ -10,6 +10,7 @@ export class ProductService {
   private logger = Logger.getInstance();
   private pool = Database.getInstance();
 
+  // ------------------ CREATE ------------------
   async createProduct(dto: CreateProductDto) {
     try {
       if (dto.category_id) {
@@ -19,10 +20,6 @@ export class ProductService {
         );
 
         if (!rows.length) {
-          this.logger.warn(
-            `Create Product Failed: Category ${dto.category_id} not found`,
-          );
-
           throw new Error("Category does not exist");
         }
       }
@@ -31,16 +28,23 @@ export class ProductService {
 
       const product = await this.repo.create(dto);
 
-      // Redis cache
+      // ✅ Cache single product
       try {
-        const cacheKey = `product:${product.id}`;
         await redisClient.setEx(
-          cacheKey,
+          `product:${product.id}`,
           24 * 60 * 60,
           JSON.stringify(product),
         );
       } catch (err) {
         this.logger.warn("Redis Error on createProduct", err);
+      }
+
+      // 🔥 CLEAR PAGINATED CACHE
+      try {
+        const keys = await redisClient.keys("products:*");
+        if (keys.length) await redisClient.del(keys);
+      } catch (err) {
+        this.logger.warn("Redis Error clearing cache (create)", err);
       }
 
       return product;
@@ -50,10 +54,16 @@ export class ProductService {
     }
   }
 
+  // ------------------ UPDATE ------------------
   async updateProduct(id: number, dto: UpdateProductDto, user: IUser) {
     try {
       const existing = await this.repo.findById(id);
-      // Only allow admin or owner to update
+
+      if (!existing) {
+        throw new Error("Product not found");
+      }
+
+      // ✅ Authorization
       if (
         existing.user_id &&
         existing.user_id !== user.id &&
@@ -62,11 +72,7 @@ export class ProductService {
         throw new Error("Unauthorized to update this product");
       }
 
-      if (!existing) {
-        this.logger.warn(`Update Failed: Product ${id} not found`);
-        throw new Error("Product not found");
-      }
-
+      // ✅ Validate category
       if (dto.category_id) {
         const { rows } = await this.pool.query(
           `SELECT id FROM categories WHERE id=$1`,
@@ -74,9 +80,6 @@ export class ProductService {
         );
 
         if (!rows.length) {
-          this.logger.warn(
-            `Update Failed: Category ${dto.category_id} not found`,
-          );
           throw new Error("Category does not exist");
         }
       }
@@ -88,16 +91,23 @@ export class ProductService {
 
       const updated = await this.repo.update(id, updatedProduct);
 
-      // Update Redis
+      // ✅ Update single product cache
       try {
-        const cacheKey = `product:${id}`;
         await redisClient.setEx(
-          cacheKey,
+          `product:${id}`,
           24 * 60 * 60,
           JSON.stringify(updated),
         );
       } catch (err) {
         this.logger.warn("Redis Error on updateProduct", err);
+      }
+
+      // 🔥 CLEAR PAGINATED CACHE
+      try {
+        const keys = await redisClient.keys("products:*");
+        if (keys.length) await redisClient.del(keys);
+      } catch (err) {
+        this.logger.warn("Redis Error clearing cache (update)", err);
       }
 
       return updated;
@@ -107,34 +117,50 @@ export class ProductService {
     }
   }
 
+  // ------------------ DELETE ------------------
   async deleteProduct(id: number, user: IUser) {
-    const existing = await this.repo.findById(id);
-    if (!existing) throw new Error("Product not found");
-
-    // Only allow admin or owner to update
-    if (
-      existing.user_id &&
-      existing.user_id !== user.id &&
-      user.role !== "admin"
-    ) {
-      throw new Error("Unauthorized to delete this product");
-    }
-
-    await this.repo.delete(id);
-
     try {
-      await redisClient.del(`product:${id}`);
-    } catch (err) {
-      this.logger.warn("Redis Error on deleteProduct", err);
-    }
+      const existing = await this.repo.findById(id);
 
-    return true;
+      if (!existing) {
+        throw new Error("Product not found");
+      }
+
+      // ✅ Authorization
+      if (
+        existing.user_id &&
+        existing.user_id !== user.id &&
+        user.role !== "admin"
+      ) {
+        throw new Error("Unauthorized to delete this product");
+      }
+
+      await this.repo.delete(id);
+
+      try {
+        // delete single product cache
+        await redisClient.del(`product:${id}`);
+
+        // 🔥 CLEAR PAGINATED CACHE
+        const keys = await redisClient.keys("products:*");
+        if (keys.length) await redisClient.del(keys);
+      } catch (err) {
+        this.logger.warn("Redis Error on deleteProduct", err);
+      }
+
+      return true;
+    } catch (error) {
+      this.logger.error("Product Service: Delete Failed", error);
+      throw error;
+    }
   }
 
+  // ------------------ GET ALL ------------------
   async getAllProducts() {
     return await this.repo.findAll();
   }
 
+  // ------------------ GET BY ID ------------------
   async getProductById(id: number) {
     const cacheKey = `product:${id}`;
 
@@ -143,7 +169,6 @@ export class ProductService {
       if (cached) return JSON.parse(cached);
 
       const product = await this.repo.findById(id);
-
       if (!product) throw new Error("Product not found");
 
       await redisClient.setEx(cacheKey, 24 * 60 * 60, JSON.stringify(product));
@@ -151,20 +176,24 @@ export class ProductService {
       return product;
     } catch (error) {
       this.logger.warn("Redis Error in getProductById", error);
+
       const product = await this.repo.findById(id);
       if (!product) throw new Error("Product not found");
+
       return product;
     }
   }
 
+  // ------------------ PAGINATED ------------------
   async getProductsPaginated(
     page: number,
     pageSize: number,
     filters?: { categoryId?: number; minPrice?: number; maxPrice?: number },
     sort?: { sortBy?: string; sortOrder?: "ASC" | "DESC" },
+    search?: string,
   ) {
     try {
-      const cacheKey = `products:page:${page}:size:${pageSize}:filters:${JSON.stringify(filters)}:sort:${JSON.stringify(sort)}`;
+      const cacheKey = `products:page:${page}:size:${pageSize}:filters:${JSON.stringify(filters)}:sort:${JSON.stringify(sort)}:search:${search || ""}`;
 
       const cached = await redisClient.get(cacheKey);
       if (cached) return JSON.parse(cached);
@@ -174,13 +203,15 @@ export class ProductService {
         pageSize,
         filters,
         sort,
+        search,
       );
 
       await redisClient.setEx(
         cacheKey,
-        10 * 60, // 10 min cache for paginated list
+        10 * 60, // 10 min
         JSON.stringify(result),
       );
+
       return result;
     } catch (error) {
       this.logger.error("Product Service: GetPaginated Failed", error);
